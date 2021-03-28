@@ -1,40 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';  
+import { getCourseNumber, getCourseTerm, hasConflict, terms } from './courseUtils';
 
 // data for scheduling
 const schedule = {
-  "title": "CS Courses for 2018-2019",
-  "courses": [
-    {
-      "id": "F101",
-      "title": "Computer Science: Concepts, Philosophy, and Connections",
-      "meets": "MWF 11:00-11:50"
-    },
-    {
-      "id": "F110",
-      "title": "Intro Programming for non-majors",
-      "meets": "MWF 10:00-10:50"
-    },
-    {
-      "id": "F111",
-      "title": "Fundamentals of Computer Programming I",
-      "meets": "MWF 13:00-13:50"
-    },
-    {
-      "id": "F211",
-      "title": "Fundamentals of Computer Programming II",
-      "meets": "TuTh 12:30-13:50"
-    }
-  ]
+  "title": "CS Courses for 2018-2019"
 };
 
 
 const App = () => {
-  const [schedule, setSchedule] = useState({ title: '', courses: [] });
+  const [schedule, setSchedule] = useState({ title: '', courses: [] });     // state variable for schedule
   
-  const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';
+  const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';  // url for retrieving course data
 
-  useEffect(() => {
+  useEffect(() => {                           // async & await for fetching data from url
     const fetchSchedule =  async () => {
       const response = await fetch(url);
       if (!response.ok) throw response;
@@ -57,26 +36,103 @@ const Banner = ({title}) => (
   <Text style={styles.bannerStyle}>{title || '[loading...]'}</Text>
 );
 
-const CourseList = ({courses}) => (
-  <ScrollView>
-    <View style={styles.courseList}>
-      { courses.map(course => <Course key={course.id} course={course} />) }
+
+// Getting course
+const CourseList = ({ courses }) => {
+  const [selectedTerm, setSelectedTerm] = useState('Fall');
+
+  const termCourses = courses.filter(course => selectedTerm === getCourseTerm(course));
+  
+  return (
+    <View>
+      <TermSelector selectedTerm={selectedTerm} setSelectedTerm={setSelectedTerm} />
+      <CourseSelector courses={termCourses} />
     </View>
-  </ScrollView>
-);
+  );
+};
 
-const getCourseNumber = course => (
-  course.id.slice(1)
-);
 
-const Course = ({course}) => (
-  <TouchableOpacity style={styles.courseButton}>
+const Course = ({course, disabled, isActive, select}) => (
+  <TouchableOpacity style={styles[disabled ? 'courseButtonDisabled' : isActive ? 'courseButtonActive' : 'courseButton']}
+      onPress={() => { if (!disabled) select(course); }}>
     <Text style={styles.courseText}>
       {`CS ${getCourseNumber(course)}\n${course.meets}`}
     </Text>
   </TouchableOpacity>
 );
 
+const CourseSelector = ({courses}) => {
+  const [selected, setSelected] = useState([]);
+
+  const toggle = course => setSelected(selected => (
+    selected.includes(course) ? selected.filter(x => x !== course) : [...selected, course]
+  ));
+
+  return (
+    <ScrollView>
+      <View style={styles.courseList}>
+        { 
+          courses.map(course => (
+            <Course key={course.id} course={course} 
+              select={toggle}
+              disabled={hasConflict(course, selected)}
+              isActive={selected.includes(course)}
+            />
+          ))
+        }
+      </View>
+    </ScrollView>
+  );
+};
+
+// Getting term
+
+const TermButton = ({term, setSelectedTerm, isActive}) => (
+  <TouchableOpacity style={styles[isActive ? 'termButtonActive' : 'termButton']} 
+      onPress={() => setSelectedTerm(term)}>
+    <Text style={styles.termText}>{term}</Text>
+  </TouchableOpacity>
+);
+
+const TermSelector = ({selectedTerm, setSelectedTerm}) => (
+  <View style={styles.termSelector}>
+    { 
+      terms.map(term => (
+        <TermButton key={term} term={term} setSelectedTerm={setSelectedTerm}
+        isActive={term === selectedTerm}
+        />
+      ))
+    }
+  </View>
+);
+
+
+// STYLING
+
+const termButtonBase = {
+  flex: 1,
+  borderRadius: 5,
+  justifyContent: 'center',
+  alignItems: 'center',
+  margin: 10,
+  height: 40,
+  padding: 10,
+  minWidth: 90,
+  maxWidth: 90,
+};
+
+
+const courseButtonBase = {
+  flex: 1,
+  borderRadius: 5,
+  justifyContent: 'center',
+  alignItems: 'center',
+  margin: 10,
+  height: 60,
+  padding: 10,
+  minWidth: 90,
+  maxWidth: 90,
+};
 
 
 const styles = StyleSheet.create({
@@ -98,21 +154,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   courseButton: {
-    flex: 1,
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 10,
-    height: 60,
-    padding: 10,
-    minWidth: 90,
-    maxWidth: 90,
+    ...courseButtonBase,
     backgroundColor: '#66b0ff',
+  },
+  courseButtonActive: {
+    ...courseButtonBase,
+    backgroundColor: '#004a99',
+  },
+  courseButtonDisabled: {
+    ...courseButtonBase,
+    backgroundColor: '#d3d3d3',
   },
   courseText:{
     color: '#fff',
     fontSize: 12,
     textAlign: 'center',
+  },
+  termSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 350,
+  },
+  termButton: {
+    ...termButtonBase,
+    backgroundColor: '#4f9f64'
+  },
+  termButtonActive: {
+    ...termButtonBase,
+    backgroundColor: '#105f25',
+  },
+  termText: {
+    color: '#fff',
+    fontSize: 15,
   }
 });
 
