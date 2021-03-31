@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';  
-import { getCourseNumber, getCourseTerm, hasConflict, terms } from './courseUtils';
+import { getCourseNumber, getCourseTerm, hasConflict, terms } from './components/courseUtils';
+import UserContext from './components/UserContext';
+import CourseEditScreen from './components/CourseEditScreen';
 
 // data for scheduling
 const schedule = {
@@ -11,11 +13,13 @@ const schedule = {
 
 const SchedulerScreen = ({navigation}) => {
   const [schedule, setSchedule] = useState({ title: '', courses: [] });     // state variable for schedule
+  const user = useContext(UserContext);
+  const canEdit = user && user.role === 'admin';
   
   const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';  // url for retrieving course data
 
   const view = (course) => {
-    navigation.navigate('CourseDetailScreen', { course });
+    navigation.navigate(canEdit ? 'CourseEditScreen' : 'CourseDetailScreen', { course });
   };
 
   useEffect(() => {                           // async & await for fetching data from url
