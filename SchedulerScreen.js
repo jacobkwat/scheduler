@@ -1,37 +1,52 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';  
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getCourseNumber, getCourseTerm, hasConflict, terms } from './components/courseUtils';
 import UserContext from './components/UserContext';
 import CourseEditScreen from './components/CourseEditScreen';
+import firebase from './components/firebase';
 
-// data for scheduling
+// hard coded data for app
 const schedule = {
   "title": "CS Courses for 2018-2019",
   "error": "There's some error!"
 };
 
+const fixCourses = json => ({
+  ...json,
+  courses: Object.values(json.courses)
+});
 
-const SchedulerScreen = ({navigation}) => {
+
+const SchedulerScreen = ({ navigation }) => {
   const [schedule, setSchedule] = useState({ title: '', courses: [] });     // state variable for schedule
   const user = useContext(UserContext);
   const canEdit = user && user.role === 'admin';
-  
-  const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';  // url for retrieving course data
+
+  // const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';  // url for retrieving course data
 
   const view = (course) => {
     navigation.navigate(canEdit ? 'CourseEditScreen' : 'CourseDetailScreen', { course });
   };
 
-  useEffect(() => {                           // async & await for fetching data from url
-    const fetchSchedule =  async () => {
-      const response = await fetch(url);
-      if (!response.ok) throw response;
-      const json = await response.json();
-      setSchedule(json);
+  // useEffect(() => {                           // async & await for fetching data from url
+  //   const fetchSchedule = async () => {
+  //     const response = await fetch(url);
+  //     if (!response.ok) throw response;
+  //     const json = await response.json();
+  //     setSchedule(json);
+  //   }
+  //   fetchSchedule();
+  // }, []);
+
+  useEffect(() => {
+    const db = firebase.database().ref();
+    const handleData = snap => {
+      if (snap.val()) setSchedule(fixCourses(snap.val()));
     }
-    fetchSchedule();
+    db.on('value', handleData, error => alert(error));
+    return () => { db.off('value', handleData); };
   }, []);
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <Banner title={schedule.title} error={schedule.error} />
@@ -41,7 +56,7 @@ const SchedulerScreen = ({navigation}) => {
 };
 
 
-const Banner = ({title}) => (
+const Banner = ({ title }) => (
   <Text style={styles.bannerStyle}>{title || '[loading...]'}</Text>
 );
 
@@ -51,11 +66,11 @@ const view = (course) => {
 
 
 // Getting course
-const CourseList = ({courses, view}) => {
+const CourseList = ({ courses, view }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
 
   const termCourses = courses.filter(course => selectedTerm === getCourseTerm(course));
-  
+
   return (
     <View>
       <TermSelector selectedTerm={selectedTerm} setSelectedTerm={setSelectedTerm} />
@@ -65,17 +80,17 @@ const CourseList = ({courses, view}) => {
 };
 
 
-const Course = ({course, disabled, isActive, select, view}) => (
+const Course = ({ course, disabled, isActive, select, view }) => (
   <TouchableOpacity style={styles[disabled ? 'courseButtonDisabled' : isActive ? 'courseButtonActive' : 'courseButton']}
-      onPress={() => { if (!disabled) select(course); }}
-      onLongPress={() => view(course)}>
+    onPress={() => { if (!disabled) select(course); }}
+    onLongPress={() => view(course)}>
     <Text style={styles.courseText}>
       {`CS ${getCourseNumber(course)}\n${course.meets}`}
     </Text>
   </TouchableOpacity>
 );
 
-const CourseSelector = ({courses, view}) => {
+const CourseSelector = ({ courses, view }) => {
   const [selected, setSelected] = useState([]);
 
   const toggle = course => setSelected(selected => (
@@ -85,9 +100,9 @@ const CourseSelector = ({courses, view}) => {
   return (
     <ScrollView>
       <View style={styles.courseList}>
-        { 
+        {
           courses.map(course => (
-            <Course key={course.id} course={course} 
+            <Course key={course.id} course={course}
               select={toggle}
               disabled={hasConflict(course, selected)}
               isActive={selected.includes(course)}
@@ -102,19 +117,19 @@ const CourseSelector = ({courses, view}) => {
 
 // Getting term
 
-const TermButton = ({term, setSelectedTerm, isActive}) => (
-  <TouchableOpacity style={styles[isActive ? 'termButtonActive' : 'termButton']} 
-      onPress={() => setSelectedTerm(term)}>
+const TermButton = ({ term, setSelectedTerm, isActive }) => (
+  <TouchableOpacity style={styles[isActive ? 'termButtonActive' : 'termButton']}
+    onPress={() => setSelectedTerm(term)}>
     <Text style={styles.termText}>{term}</Text>
   </TouchableOpacity>
 );
 
-const TermSelector = ({selectedTerm, setSelectedTerm}) => (
+const TermSelector = ({ selectedTerm, setSelectedTerm }) => (
   <View style={styles.termSelector}>
-    { 
+    {
       terms.map(term => (
         <TermButton key={term} term={term} setSelectedTerm={setSelectedTerm}
-        isActive={term === selectedTerm}
+          isActive={term === selectedTerm}
         />
       ))
     }
@@ -180,7 +195,7 @@ const styles = StyleSheet.create({
     ...courseButtonBase,
     backgroundColor: '#d3d3d3',
   },
-  courseText:{
+  courseText: {
     color: '#fff',
     fontSize: 12,
     textAlign: 'center',
