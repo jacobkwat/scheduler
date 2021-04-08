@@ -5,12 +5,6 @@ import UserContext from './components/UserContext';
 import CourseEditScreen from './components/CourseEditScreen';
 import firebase from './components/firebase';
 
-// hard coded data for app
-const schedule = {
-  "title": "CS Courses for 2018-2019",
-  "error": "There's some error!"
-};
-
 const fixCourses = json => ({
   ...json,
   courses: Object.values(json.courses)
