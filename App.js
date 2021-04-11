@@ -6,50 +6,56 @@ import SchedulerScreen from "./SchedulerScreen";
 import CourseDetailScreen from "./components/CourseDetailScreen";
 import UserContext from "./components/UserContext";
 import CourseEditScreen from "./components/CourseEditScreen";
-import { Button } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import SignInScreen from "./components/SignInScreen"
+import firebase from './shared/firebase';
+import SignInButton from './components/SignInButton';
+
 
 const Stack = createStackNavigator();
 
-// const SignInButton = ({ navigation, user }) => {
-//   return (
-//       <Text>Sign In</Text>
-//   );
-// };
-
 const App = () => {
+  const [user, setUser] = useState();
   const [currentUser, setCurrentUser] = useState(null);
-  const addUserData = (data) => {
-    setCurrentUser((currentUser) => ({
-      ...currentUser,
-      ...data,
-    }));
-  };
+  // const addUserData = (data) => {
+  //   setCurrentUser((currentUser) => ({
+  //     ...currentUser,
+  //     ...data,
+  //   }));
+  // };
 
   useEffect(() => {
-    if (currentUser && user.uid) {
-      const db = firebase.database().ref("users").child(user.uid);
+    if (currentUser && currentUser.uid) {
+      const db = firebase.database().ref("users").child(currentUser.uid);
       const handleData = (snap) => {
-        addUserData(snap.val());
+        setUser({ uid: currentUser.uid, ...snap.val() });
       };
       db.on("value", handleData, (error) => alert(error));
       return () => {
         db.off("value", handleData);
       };
+    } else {
+      setUser(null);
     }
   }, [currentUser]);
 
+  // Authentication from firebase
+  useEffect(() => {
+    firebase.auth().onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+  }, []);
+
   return (
-    <UserContext.Provider value={currentUser}>
+    <UserContext.Provider value={user}>
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen
             name="ScheduleScreen"
             component={SchedulerScreen}
             options={({ navigation }) => ({
-              title: "Schedule",
+              title: "CS Schedule",
               headerRight: () => (
-                <Button navigation={navigation} user={currentUser} />
+                <SignInButton navigation={navigation} user={user} />
               ),
             })}
           />
@@ -62,6 +68,11 @@ const App = () => {
             name="CourseDetailScreen"
             component={CourseDetailScreen}
             options={{ title: "Course detail" }}
+          />
+          <Stack.Screen
+            name="SignInScreen"
+            component={SignInScreen}
+            options={{ title: "Sign In" }}
           />
         </Stack.Navigator>
       </NavigationContainer>

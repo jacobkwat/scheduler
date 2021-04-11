@@ -3,7 +3,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { getCourseNumber, getCourseTerm, hasConflict, terms } from './components/courseUtils';
 import UserContext from './components/UserContext';
 import CourseEditScreen from './components/CourseEditScreen';
-import firebase from './components/firebase';
+import firebase from './shared/firebase';
 
 const fixCourses = json => ({
   ...json,
@@ -15,6 +15,7 @@ const SchedulerScreen = ({ navigation }) => {
   const [schedule, setSchedule] = useState({ title: '', courses: [] });     // state variable for schedule
   const user = useContext(UserContext);
   const canEdit = user && user.role === 'admin';
+  console.log(canEdit);
 
   // const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';  // url for retrieving course data
 
@@ -54,9 +55,9 @@ const Banner = ({ title }) => (
   <Text style={styles.bannerStyle}>{title || '[loading...]'}</Text>
 );
 
-const view = (course) => {
-  navigation.navigate('CourseDetailScreen', { course });
-};
+// const view = (course) => {
+//   navigation.navigate('CourseDetailScreen', { course });
+// };
 
 
 // Getting course
